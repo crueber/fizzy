@@ -6,7 +6,7 @@
 #   docker compose up -d
 #
 # The first boot auto-generates SECRET_KEY_BASE and VAPID keys and writes them
-# to the fizzy_config volume. Keep that volume backed up.
+# to the fizzy_secrets volume. Keep that volume backed up.
 
 services:
   fizzy:
@@ -20,8 +20,9 @@ services:
       # SQLite databases and Active Storage file uploads
       - fizzy_storage:/rails/storage
       # Generated secrets.env (SECRET_KEY_BASE, VAPID keys) live here
+      # Uses a dedicated /rails/secrets path to avoid overwriting baked-in config files
       # IMPORTANT: back up this volume — losing it invalidates all sessions and web push subscriptions
-      - fizzy_config:/rails/config
+      - fizzy_secrets:/rails/secrets
     env_file:
       - .env
     environment:
@@ -43,5 +44,5 @@ services:
 volumes:
   fizzy_storage:
     driver: local
-  fizzy_config:
+  fizzy_secrets:
     driver: local
