@@ -1,0 +1,48 @@
+# docker-compose.yml
+# Production deployment for Fizzy (SQLite + Solid Queue embedded in Puma)
+#
+# Quick start:
+#   cp .env.example .env          # fill in BASE_URL and optionally SMTP_* vars
+#   docker compose up -d
+#
+# The first boot auto-generates SECRET_KEY_BASE and VAPID keys and writes them
+# to the fizzy_secrets volume. Keep that volume backed up.
+
+services:
+  fizzy:
+    image: ghcr.io/${FIZZY_IMAGE_REPO:-crueber/fizzy}:${FIZZY_IMAGE_TAG:-latest}
+    # To use a locally built image instead, comment out 'image:' above and uncomment:
+    # build: .
+    restart: unless-stopped
+    ports:
+      - "${FIZZY_PORT:-3006}:80"
+    volumes:
+      # SQLite databases and Active Storage file uploads
+      - fizzy_storage:/rails/storage
+      # Generated secrets.env (SECRET_KEY_BASE, VAPID keys) live here
+      # Uses a dedicated /rails/secrets path to avoid overwriting baked-in config files
+      # IMPORTANT: back up this volume — losing it invalidates all sessions and web push subscriptions
+      - fizzy_secrets:/rails/secrets
+    env_file:
+      - .env
+    environment:
+      # Disable Rails' own SSL enforcement — TLS is terminated by the external reverse proxy
+      DISABLE_SSL: "true"
+      # Solid Queue embedded in Puma (no separate worker container needed)
+      SOLID_QUEUE_IN_PUMA: "true"
+      # Use local disk for Active Storage (files go into fizzy_storage volume)
+      ACTIVE_STORAGE_SERVICE: "local"
+      # SQLite adapter
+      DATABASE_ADAPTER: "sqlite"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  fizzy_storage:
+    driver: local
+  fizzy_secrets:
+    driver: local
