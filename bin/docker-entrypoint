@@ -1,8 +1,33 @@
 #!/bin/bash -e
 
+SECRETS_FILE="/rails/config/secrets.env"
+
+# On first boot: generate SECRET_KEY_BASE and VAPID keys, persist to secrets file
+if [ ! -f "$SECRETS_FILE" ]; then
+  echo "==> First boot detected: generating SECRET_KEY_BASE and VAPID keys..."
+
+  SECRET_KEY_BASE=$(ruby -e "require 'securerandom'; puts SecureRandom.hex(64)")
+
+  # Generate VAPID keys using the web-push gem
+  VAPID_KEYS=$(bundle exec ruby -e "require 'web-push'; vapid = WebPush.generate_key; puts 'VAPID_PUBLIC_KEY=' + vapid.public_key; puts 'VAPID_PRIVATE_KEY=' + vapid.private_key")
+
+  {
+    echo "SECRET_KEY_BASE=${SECRET_KEY_BASE}"
+    echo "${VAPID_KEYS}"
+  } > "$SECRETS_FILE"
+
+  echo "==> Secrets written to ${SECRETS_FILE}"
+fi
+
+# On every boot: load the secrets file so all vars are exported into the environment
+set -a
+# shellcheck source=/dev/null
+source "$SECRETS_FILE"
+set +a
+
 # If running the rails server then create or migrate existing database
 if [ "${1}" == "./bin/thrust" ] && [ "${2}" == "./bin/rails" ] && [ "${3}" == "server" ]; then
   MIGRATE=1 ./bin/rails db:prepare
 fi
 
-exec "${@}"
+exec "$@"
