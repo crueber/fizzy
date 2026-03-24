@@ -1,10 +1,6 @@
 # docker-compose.yml
 # Production deployment for Fizzy (SQLite + Solid Queue embedded in Puma)
 #
-# Quick start:
-#   cp .env.example .env          # fill in BASE_URL and optionally SMTP_* vars
-#   docker compose up -d
-#
 # The first boot auto-generates SECRET_KEY_BASE and VAPID keys and writes them
 # to the fizzy_secrets volume. Keep that volume backed up.
 
@@ -23,17 +19,31 @@ services:
       # Uses a dedicated /rails/secrets path to avoid overwriting baked-in config files
       # IMPORTANT: back up this volume — losing it invalidates all sessions and web push subscriptions
       - fizzy_secrets:/rails/secrets
-    env_file:
-      - .env
     environment:
+      # .env.example has some examples for what needs to be in place for this.
+      - RAILS_ENV=$RAILS_ENV
+      - FIZZY_HOST=$FIZZY_HOST
+      - SMTP_ADDRESS=$SMTP_ADDRESS
+      - SMTP_PORT=$SMTP_PORT
+      - SMTP_DOMAIN=$SMTP_DOMAIN
+      - SMTP_USERNAME=$SMTP_USERNAME
+      - SMTP_PASSWORD=$SMTP_PASSWORD
+      - SMTP_AUTHENTICATION=$SMTP_AUTHENTICATION
+      - SMTP_TLS=$SMTP_TLS
+      - MAILER_FROM_ADDRESS=$MAILER_FROM_ADDRESS
+      - RAILS_LOG_LEVEL=$RAILS_LOG_LEVEL
+      - BASE_URL=$BASE_URL
+      - WEB_CONCURRENCY=2
+      - JOB_CONCURRENCY=1
+      - MULTI_TENANT=true
       # Disable Rails' own SSL enforcement — TLS is terminated by the external reverse proxy
-      DISABLE_SSL: "true"
+      - DISABLE_SSL=true
       # Solid Queue embedded in Puma (no separate worker container needed)
-      SOLID_QUEUE_IN_PUMA: "true"
+      - SOLID_QUEUE_IN_PUMA=true
       # Use local disk for Active Storage (files go into fizzy_storage volume)
-      ACTIVE_STORAGE_SERVICE: "local"
+      - ACTIVE_STORAGE_SERVICE=local
       # SQLite adapter
-      DATABASE_ADAPTER: "sqlite"
+      - DATABASE_ADAPTER=sqlite
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/up"]
       interval: 30s
