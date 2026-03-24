@@ -45,3 +45,6 @@
 
 # Git worktrees
 /.worktrees
+
+# Planning documents
+/plans
